@@ -1,0 +1,74 @@
+services:
+
+  catalogdb:
+    container_name: catalogdb
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: CatalogDb
+    restart: always
+    volumes:
+      - catalogdbdata:/var/lib/postgresql/data/
+    networks:
+      - eshop-network
+
+  basketdb:
+    container_name: basketdb
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: BasketDb
+    restart: always
+    ports:
+      - "5434:5432"
+    volumes:
+      - posgres_basket:/var/lib/postgresql/data/
+    networks:
+      - eshop-network
+
+  catalog.api:
+    container_name: catalog.api
+    build:
+      context: .
+      dockerfile: src/Catalog.API/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Database: "Host=catalogdb;Port=5432;Database=CatalogDb;Username=postgres;Password=postgres;Include Error Detail=true"
+    ports:
+      - "8081:8080"
+    depends_on:
+      - catalogdb
+    networks:
+      - eshop-network
+
+  redis:
+    container_name: redis
+    image: redis:7.4
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - eshop-network
+
+  basket.api:
+    container_name: basket.api
+    build:
+      context: .
+      dockerfile: src/Basket/Basket.API/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Database: "Host=basketdb;Port=5432;Database=BasketDb;Username=postgres;Password=postgres;Include Error Detail=true"
+      ConnectionStrings__Redis: "redis:6379"
+    ports:
+      - "8082:8080"
+    depends_on:
+      - basketdb
+      - redis
+    networks:
+      - eshop-network
+
+networks:
+  eshop-network:
+    driver: bridge
